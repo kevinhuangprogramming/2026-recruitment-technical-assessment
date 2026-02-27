@@ -19,6 +19,12 @@ interface ingredient extends cookbookEntry {
   cookTime: number;
 }
 
+interface recipeSummary {
+  name: string;
+  cookTime: number;
+  ingredients: requiredItem[];
+}
+
 // =============================================================================
 // ==== HTTP Endpoint Stubs ====================================================
 // =============================================================================
@@ -58,7 +64,7 @@ const parse_handwriting = (recipeName: string): string | null => {
   // Trim leading and trailing whitespace
   recipeName = recipeName.trim();
 
-  // If empty after cleaning → return null
+  // Make sure string is not empty after cleaning
   if (recipeName.length === 0) return null;
 
   // Capitalise first letter of each word, lowercase the rest
@@ -73,12 +79,16 @@ const parse_handwriting = (recipeName: string): string | null => {
 // [TASK 2] ====================================================================
 // Endpoint that adds a CookbookEntry to your magical cookbook
 app.post("/entry", (req:Request, res:Response) => {
-  const success = addCookbookEntry(req.body);
+  const { input } = req.body;
+
+  const success = addCookbookEntry(input);
 
   if (!success) {
-    return res.status(400).send();
+    res.status(400).send();
+    return;
   }
-  return res.status(200).send();
+  res.status(200).send();
+  return;
 });
 
 // Task 2 Backend function
@@ -101,6 +111,7 @@ const addCookbookEntry = (entry: any): boolean => {
 
   // Testing ingredient now...
   if (type === "ingredient") {
+    // checking cook time is not less than 0
     if (typeof entry.cookTime !== "number" || entry.cookTime < 0) {
       return false;
     }
@@ -124,7 +135,7 @@ const addCookbookEntry = (entry: any): boolean => {
       if (typeof item.name !== "string" || typeof item.quantity !== "number") {
         return false;
       }
-
+      // Checking required items are all unique
       if (seen.has(item.name)) {
         return false;
       }
@@ -150,6 +161,42 @@ app.get("/summary", (req:Request, res:Request) => {
   res.status(500).send("not yet implemented!")
 
 });
+
+// Task 3 Backend function
+const getRecipeSummary = (name: string): recipeSummary | null => {
+  // Checking
+  const entry = cookbook.get(name);
+  if (!entry || entry.type === "ingredient") {
+    return null;
+  }
+
+  const recipeFound = entry as recipe;
+  const baseIngredients: requiredItem[] = [];
+  let totalCookingTime = 0;
+
+  for (const requiredItem of recipeFound.requiredItems) {
+    // Check that recipe or ingredient exists
+    const required = cookbook.get(requiredItem.name);
+    if (!required) return null;
+
+    if (required.type === "ingredient") {
+      // Check whether ingredient already exists
+      const existingIngredient = baseIngredients.find(ing => ing.name === requiredItem.name);
+      if (!existingIngredient) {
+        baseIngredients.push(requiredItem);
+      } else {
+        existingIngredient.quantity += requiredItem.quantity;
+      }
+
+      // Add to total cooking time
+      const reqIngredient = required as ingredient;
+      totalCookingTime += requiredItem.quantity * reqIngredient.cookTime;
+    } else {
+
+    }
+
+  }
+}
 
 // =============================================================================
 // ==== DO NOT TOUCH ===========================================================
