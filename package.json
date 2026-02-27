@@ -1,0 +1,19 @@
+{
+  "name": "2026-recruitment-technical-assessment",
+  "version": "1.0.0",
+  "description": "Hiya! Thank you for applying to DevSoc project teams for 2026. Our projects are proudly maintained by student society volunteers like yourself who for many years have ideated, built and iterated the websites within our portfolios.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "supertest": "^7.2.2"
+  }
+}

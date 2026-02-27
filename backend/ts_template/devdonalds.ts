@@ -79,9 +79,7 @@ const parse_handwriting = (recipeName: string): string | null => {
 // [TASK 2] ====================================================================
 // Endpoint that adds a CookbookEntry to your magical cookbook
 app.post("/entry", (req:Request, res:Response) => {
-  const { input } = req.body;
-
-  const success = addCookbookEntry(input);
+  const success = addCookbookEntry(req.body);
 
   if (!success) {
     res.status(400).send();
@@ -156,7 +154,7 @@ const addCookbookEntry = (entry: any): boolean => {
 
 // [TASK 3] ====================================================================
 // Endpoint that returns a summary of a recipe that corresponds to a query name
-app.get("/summary", (req:Request, res:Request) => {
+app.get("/summary", (req:Request, res:Response) => {
   const name = req.query.name as string;
   if (!name) {
     res.status(400).send();
