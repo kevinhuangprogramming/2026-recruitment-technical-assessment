@@ -157,9 +157,19 @@ const addCookbookEntry = (entry: any): boolean => {
 // [TASK 3] ====================================================================
 // Endpoint that returns a summary of a recipe that corresponds to a query name
 app.get("/summary", (req:Request, res:Request) => {
-  // TODO: implement me
-  res.status(500).send("not yet implemented!")
+  const name = req.query.name as string;
+  if (!name) {
+    res.status(400).send();
+    return;
+  }
 
+  const summary = getRecipeSummary(name);
+
+  if (!summary) {
+    res.status(400).send();
+    return;
+  }
+  return res.status(200).json(summary);
 });
 
 // Task 3 Backend function
@@ -170,33 +180,58 @@ const getRecipeSummary = (name: string): recipeSummary | null => {
     return null;
   }
 
-  const recipeFound = entry as recipe;
+  const recipeEntry = entry as recipe;
   const baseIngredients: requiredItem[] = [];
   let totalCookingTime = 0;
 
-  for (const requiredItem of recipeFound.requiredItems) {
-    // Check that recipe or ingredient exists
-    const required = cookbook.get(requiredItem.name);
-    if (!required) return null;
+  for (const item of recipeEntry.requiredItems) {
+    const time = processRequiredItem(item, baseIngredients, 1);
+    if (time === -1) return null; // ingredient or recipe does not exist
+    totalCookingTime += time;
+  }
 
-    if (required.type === "ingredient") {
-      // Check whether ingredient already exists
-      const existingIngredient = baseIngredients.find(ing => ing.name === requiredItem.name);
-      if (!existingIngredient) {
-        baseIngredients.push(requiredItem);
-      } else {
-        existingIngredient.quantity += requiredItem.quantity;
-      }
+  return {
+    name: recipeEntry.name,
+    cookTime: totalCookingTime,
+    ingredients: baseIngredients
+  };
+}
 
-      // Add to total cooking time
-      const reqIngredient = required as ingredient;
-      totalCookingTime += requiredItem.quantity * reqIngredient.cookTime;
+// Recursive helper function
+const processRequiredItem = (
+  item: requiredItem,
+  baseIngredients: requiredItem[],
+  multiplier: number
+): number => {
+  // Check whether item exists in cookbook
+  const entry = cookbook.get(item.name);
+  if (!entry) return -1;
+
+  if (entry.type === "ingredient") {
+    // Add ingredient to base ingredients
+    const existing = baseIngredients.find(ing => ing.name === item.name);
+    if (!existing) {
+      baseIngredients.push({ name: item.name,
+                             quantity: item.quantity * multiplier });
     } else {
-
+      existing.quantity += item.quantity * multiplier;
     }
 
+    return item.quantity * multiplier * (entry as ingredient).cookTime;
+  } else {
+    // entry is a recipe, so we recurse
+    const recipeEntry = entry as recipe;
+    let time = 0;
+    for (const subItem of recipeEntry.requiredItems) {
+      const subTime = processRequiredItem(subItem, baseIngredients,
+                                          item.quantity * multiplier);
+      if (subTime === -1) return -1; // propagate the error
+      time += subTime;
+    }
+    return time;
   }
 }
+
 
 // =============================================================================
 // ==== DO NOT TOUCH ===========================================================
