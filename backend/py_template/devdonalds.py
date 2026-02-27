@@ -21,6 +21,12 @@ class Recipe(CookbookEntry):
 class Ingredient(CookbookEntry):
 	cook_time: int
 
+@dataclass
+class RecipeSummary:
+	name: str
+	cook_time: int
+	required_items: List[RequiredItem]
+
 
 # =============================================================================
 # ==== HTTP Endpoint Stubs ====================================================
@@ -159,6 +165,50 @@ def add_cookbook_entry(data: dict) -> bool:
 def summary():
 	# TODO: implement me
 	return 'not implemented', 500
+
+# Main summary function using global cookbook
+def get_recipe_summary(name: str):
+    entry = cookbook.get(name)
+    if not entry or isinstance(entry, Ingredient):
+        return None
+
+    recipe_entry: Recipe = entry
+    base_ingredients: Dict[str, int] = {}
+    total_cook_time = 0
+
+    for req_item in recipe_entry.required_items:
+        time = process_required_item(req_item, 1, base_ingredients)
+        if time == -1:
+            return None
+        total_cook_time += time
+
+    ingredients_list = [RequiredItem(name=k, quantity=v) for k, v in base_ingredients.items()]
+
+    return {
+        "name": recipe_entry.name,
+        "cookTime": total_cook_time,
+        "ingredients": ingredients_list
+    }
+
+# Recursive helper function using the global cookbook
+def process_required_item(item: RequiredItem, multiplier: int, base_ingredients: Dict[str, int]) -> int:
+    entry = cookbook.get(item.name)  # directly use global cookbook
+    if not entry:
+        return -1  # missing ingredient/recipe
+
+    if isinstance(entry, Ingredient):
+        qty = item.quantity * multiplier
+        base_ingredients[item.name] = base_ingredients.get(item.name, 0) + qty
+        return qty * entry.cook_time
+
+    else:  # entry is a Recipe
+        total_time = 0
+        for sub_item in entry.required_items:
+            sub_time = process_required_item(sub_item, item.quantity * multiplier, base_ingredients)
+            if sub_time == -1:
+                return -1
+            total_time += sub_time
+        return total_time
 
 
 # =============================================================================
