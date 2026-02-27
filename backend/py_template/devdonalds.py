@@ -163,8 +163,24 @@ def add_cookbook_entry(data: dict) -> bool:
 # Endpoint that returns a summary of a recipe that corresponds to a query name
 @app.route('/summary', methods=['GET'])
 def summary():
-	# TODO: implement me
-	return 'not implemented', 500
+	name = request.args.get("name")
+	if not name:
+		return '', 400
+
+	summary_result = get_recipe_summary(name)
+	if summary_result is None:
+		return '', 400
+
+    # Convert RequiredItem dataclasses to dicts for JSON
+	response = {
+        "name": summary_result["name"],
+        "cookTime": summary_result["cookTime"],
+        "ingredients": [
+            {"name": item.name, "quantity": item.quantity}
+            for item in summary_result["ingredients"]
+        ]
+    }
+	return jsonify(response), 200
 
 # Main summary function using global cookbook
 def get_recipe_summary(name: str):
